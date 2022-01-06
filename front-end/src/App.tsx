@@ -1,5 +1,7 @@
-import styled, { css } from "styled-components";
+import styled from "styled-components";
 import { useForm } from "react-hook-form";
+import { useMemo, useState } from "react";
+import { useTable } from "react-table";
 
 type FormType = {
   networkAddressBlock: string;
@@ -9,16 +11,50 @@ type FormType = {
 };
 
 function App() {
+  const [data, setData] = useState<any[]>([]);
   const { register, handleSubmit } = useForm<FormType>();
 
   function onSubmit(data: any) {
-    console.log(data);
+    fetch("http://localhost:3001/api", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        console.log("server Data is ", data);
+        setData(data);
+      });
   }
+
+  const columns = useMemo(
+    () => [
+      {
+        Header: "ID",
+        accessor: "id",
+      },
+      {
+        Header: "Subnet Address",
+        accessor: "subnetAddress",
+      },
+      {
+        Header: "Host Address Range",
+        accessor: "hostAddressRange",
+      },
+      {
+        Header: "Broadcast Address",
+        accessor: "broadcastAddress",
+      },
+    ],
+    []
+  );
 
   return (
     <Container>
       <header>
-        <h1>IPv4 Subnet Calculator</h1>
+        <h1>Subnet Detail Calculator</h1>
       </header>
       <Wrapper>
         <ContentWrapper onSubmit={handleSubmit(onSubmit)}>
@@ -40,10 +76,50 @@ function App() {
           </ItemWrapper>
           <button type="submit">Submit</button>
         </ContentWrapper>
-
-        <ContentWrapper>2</ContentWrapper>
       </Wrapper>
+      <TableStyles>
+        <Table columns={columns} data={[]} />
+      </TableStyles>
     </Container>
+  );
+}
+
+type TableProps = {
+  columns: any;
+  data: any;
+};
+
+function Table({ columns, data }: TableProps) {
+  const { getTableProps, getTableBodyProps, headerGroups, rows, prepareRow } =
+    useTable({
+      columns,
+      data,
+    });
+
+  return (
+    <table {...getTableProps()}>
+      <thead>
+        {headerGroups.map((headerGroup) => (
+          <tr {...headerGroup.getHeaderGroupProps()}>
+            {headerGroup.headers.map((column) => (
+              <th {...column.getHeaderProps()}>{column.render("Header")}</th>
+            ))}
+          </tr>
+        ))}
+      </thead>
+      <tbody {...getTableBodyProps()}>
+        {rows.map((row, i) => {
+          prepareRow(row);
+          return (
+            <tr {...row.getRowProps()}>
+              {row.cells.map((cell) => {
+                return <td {...cell.getCellProps()}>{cell.render("Cell")}</td>;
+              })}
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
   );
 }
 
@@ -82,4 +158,32 @@ const Wrapper = styled.div`
   gap: 20px;
 `;
 
+const TableStyles = styled.div`
+  padding: 1rem;
+
+  table {
+    border-spacing: 0;
+    border: 1px solid black;
+
+    tr {
+      :last-child {
+        td {
+          border-bottom: 0;
+        }
+      }
+    }
+
+    th,
+    td {
+      margin: 0;
+      padding: 0.5rem;
+      border-bottom: 1px solid black;
+      border-right: 1px solid black;
+
+      :last-child {
+        border-right: 0;
+      }
+    }
+  }
+`;
 export default App;
